@@ -162,7 +162,7 @@ mechanismBarplot <- function(data, geneset, mainsize=12, filterMutations=NULL,bi
   list('plot'=p, 'table'=fracdf)
 }
 
-#Tileplot (1a):
+#Tileplot (1b):
 biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, force_disease=TRUE, path=NULL, colorvec,
                                   justLOH=FALSE, cutoff=0, borders=FALSE, justDrivers=TRUE, fga_and_tmb, tsgdf, subtypeTable, ncolors=4){
   dat <- data
@@ -192,9 +192,9 @@ biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, f
   dat$`Biallelic %` <- round(100*(dat$`Biallelic Fraction`))
   
   ###Making table with row for each gene, disease, and mechanism (and one for pancan):
-  n <- as.data.frame(table(drivers$Hugo_Symbol))
-  n.drivers <- as.data.frame(table(drivers$Hugo_Symbol[which(drivers$mechanism != 'LOH')]))
-  n.biallelic <- as.data.frame(table(drivers$Hugo_Symbol[which(drivers$final_zygosity == 'biallelic' & drivers$mechanism != 'LOH')]))
+  n <- as.data.frame(table(data$Hugo_Symbol))
+  n.drivers <- as.data.frame(table(data$Hugo_Symbol[which(data$mechanism != 'LOH')]))
+  n.biallelic <- as.data.frame(table(data$Hugo_Symbol[which(data$final_zygosity == 'biallelic' & data$mechanism != 'LOH')]))
   colnames(n)[1] <- colnames(n.drivers)[1] <- colnames(n.biallelic)[1] <- 'Hugo_Symbol'
   colnames(n)[2] <- 'N'
   colnames(n.drivers)[2] <- 'Drivers'
@@ -203,8 +203,8 @@ biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, f
   genedf$`Alteration Fraction` <- genedf$Drivers/genedf$N
   genedf$`Biallelic Fraction` <- genedf$Biallelic/genedf$Drivers
   genedf <- merge(genedf, tsgdf[,c('Hugo_Symbol','Pathway')], all = TRUE)
-  n.mech <- as.data.frame(table(drivers[which(drivers$mechanism != 'LOH' & drivers$Hugo_Symbol %in% tsgdf$Hugo_Symbol),c('Hugo_Symbol','mechanism')]))
-  n.drivers.mech <- as.data.frame(table(drivers[which(drivers$mechanism != 'LOH' & drivers$Hugo_Symbol %in% tsgdf$Hugo_Symbol),c('Hugo_Symbol','mechanism')]))
+  n.mech <- as.data.frame(table(data[which(data$mechanism != 'LOH' & data$Hugo_Symbol %in% tsgdf$Hugo_Symbol),c('Hugo_Symbol','mechanism')]))
+  n.drivers.mech <- as.data.frame(table(data[which(data$mechanism != 'LOH' & data$Hugo_Symbol %in% tsgdf$Hugo_Symbol),c('Hugo_Symbol','mechanism')]))
   colnames(n.mech)[1] <- colnames(n.drivers.mech)[1] <- 'Hugo_Symbol'
   colnames(n.mech)[2] <- colnames(n.drivers.mech)[2] <- 'Mechanism'
   colnames(n.mech)[3] <- 'Instances'
@@ -214,17 +214,20 @@ biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, f
   mechdf$`Fraction_of_Alterations` <- mechdf$Drivers/mechdf$Alterations
   genedf <- genedf[order(genedf$`Biallelic Fraction`, decreasing = TRUE),]
   mechdf$Hugo_Symbol <- factor(mechdf$Hugo_Symbol, levels = tsgdf$Hugo_Symbol)
+  #mechdf$Mechanism <- factor(mechdf$Mechanism, levels = 
+  #                              c('Homdel','Mut + LOH','Mut + fusion','Compound','Mutation','Amplification'))
+  mechdf <- mechdf[which(mechdf$Mechanism != 'Amplification'),]
   mechdf$Mechanism <- factor(mechdf$Mechanism, levels = 
-                                c('Homdel','Mut + LOH','Mut + fusion','Compound','Mutation','Amplification'))
+                               c('Mut + LOH','Mut + fusion','Homdel','Compound','Mutation'))
   dat$`Alteration %` <- round(100*dat$`Alteration Fraction`)
   geneOrder <- as.character(genedf$Hugo_Symbol[order(genedf$`Alteration Fraction`, decreasing = TRUE)])
   genedf$Hugo_Symbol <- factor(genedf$Hugo_Symbol, levels = geneOrder)
   mechdf$Hugo_Symbol <- factor(mechdf$Hugo_Symbol, levels = geneOrder)
-  mechdf$Mechanism <- factor(mechdf$Mechanism, levels = names(colorvec))
+  #mechdf$Mechanism <- factor(mechdf$Mechanism, levels = names(colorvec))
   dat$Gene <- factor(dat$Gene, levels = geneOrder)
   #Median biallelic fraction: midpoint for color range
   med <- length(which(data$final_zygosity == 'biallelic'))/length(which(data$zygosity_call %in% 
-                                                                          c('Biallelic - Homdel','Biallelic - Mut + LOH','Biallelic - Mut + fusion','Biallelic - compound','Gain-of-mutant - Mut + copy gain','Heterozygous')))
+       c('Biallelic - Homdel','Biallelic - Mut + LOH','Biallelic - Mut + fusion','Biallelic - compound','Gain-of-mutant - Mut + copy gain','Heterozygous')))
   
   ###Adding 'n' values:
   dtab <- table(unique(data[,c('Tumor_Sample_Barcode','disease_subtype')])[,2])
@@ -287,11 +290,11 @@ biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, f
   genedf$`Alteration %` <- 100*genedf$`Alteration Fraction`
   genedf$`Log Alteration %` <- log(100*genedf$`Alteration Fraction`)
   dat$Pathway <- factor(dat$Pathway, levels = pathwayOrder)
-  dat$Gene <- factor(dat$Gene, levels = geneOrder)
+  dat$Gene <- factor(dat$Gene, levels = rev(geneOrder))
   genedf$Pathway <- factor(genedf$Pathway, levels = pathwayOrder)
-  genedf$Hugo_Symbol <- factor(genedf$Hugo_Symbol, levels = geneOrder)
+  genedf$Hugo_Symbol <- factor(genedf$Hugo_Symbol, levels = rev(geneOrder))
   mechdf$Pathway <- factor(mechdf$Pathway, levels = pathwayOrder)
-  mechdf$Hugo_Symbol <- factor(mechdf$Hugo_Symbol, levels = geneOrder)
+  mechdf$Hugo_Symbol <- factor(mechdf$Hugo_Symbol, levels = rev(geneOrder))
   mechdf$Mechanism <- factor(mechdf$Mechanism, levels = c("Mutation","Mutation + Gain of Mutant","Amplification","Compound",
                                                           "Homdel","Mut + fusion","Mut + LOH"))
   
@@ -309,23 +312,31 @@ biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, f
   colfunc <- colorRampPalette(c("white", "yellow", "red"))
   grad <- colfunc(ncolors)
   
-  p_alt <- ggplot(aes(x=Hugo_Symbol, y=1000*`Alteration Fraction`), data=genedf) + scale_y_log10(breaks=c(1,5,10,20,30,50,100,1000)) + geom_bar(stat='identity') + 
+  #Adding number of driver alterations in parentheses; because of facets_grtid, have to add it to all three data frames and 
+  #make gene_alts the x-variable instead of gene; also have to make sure order is preserved:
+  genedf <- genedf[order(genedf$Hugo_Symbol),]
+  genedf$gene_alts <- str_c(genedf$Hugo_Symbol, ' (',genedf$Drivers, ')')
+  genedf$gene_alts <- factor(genedf$gene_alts, levels = unique(genedf$gene_alts))
+  dat$gene_alts <- factor(genedf$gene_alts[match(dat$Gene, genedf$Hugo_Symbol)], levels = unique(genedf$gene_alts))
+  mechdf$gene_alts <- factor(genedf$gene_alts[match(mechdf$Hugo_Symbol, genedf$Hugo_Symbol)], levels = unique(genedf$gene_alts))
+  
+  p_alt <- ggplot(aes(x=gene_alts, y=1000*`Alteration Fraction`), data=genedf) + scale_y_log10(breaks=c(1,5,10,20,30,50,100,1000)) + geom_bar(stat='identity') + 
     theme_bw() + coord_flip() + xlab('') + theme(axis.text.y = element_text(size=9)) + ggtitle('Pan-Cancer') + 
-    theme(axis.text.x = element_text(size = xsize), plot.title  = element_text(size=mainsize), axis.title.x = element_text(size = xsize)) + xlab('10*Alteration Fracion') + 
+    theme(axis.text.x = element_text(size = xsize), plot.title  = element_text(size=mainsize), axis.title.x = element_text(size = xsize)) + 
+    xlab('10*Alteration Fracion') + 
     facet_grid(Pathway ~ ., scales = "free", space = "free") + 
     theme(strip.text = element_text(
       size = 6))
-  p_heatmap <- ggplot(data=dat,aes(x=abbrev_n,y=Gene,fill=`Biallelic %`)) + geom_tile() + theme_bw() + 
+  p_heatmap <- ggplot(data=dat,aes(x=abbrev_n,y=gene_alts,fill=`Biallelic %`)) + geom_tile() + theme_bw() + 
     theme(axis.text.x = element_blank(),axis.text.y = element_blank(),axis.title.y = element_blank(), plot.title = element_text(size=mainsize),
           legend.position = 'right') + 
     geom_text(aes(label = `Alteration %`), color = "black", size = 3) + scale_fill_gradientn(colours = grad,values = seq(from=0, to=1, length=ncolors)) + 
     labs(x='',y='Gene') + ylab('') + ggtitle('Biallelic Fraction Across Cancer Type') + 
-    geom_point(data=dat[which(dat$Alterations < 4 | dat$`Alteration %` == ''),], shape=5, aes(x=abbrev_n,y=Gene,fill=`Biallelic %`)) + 
+    geom_point(data=dat[which(dat$Alterations < 4 & dat$Alterations > 0 | dat$`Alteration %` == ''),], shape=5, aes(x=abbrev_n,y=gene_alts,fill=`Biallelic %`)) + 
     facet_grid(Pathway ~ organ, scales = "free", space = "free")
-  p_bi <- ggplot(aes(x=Hugo_Symbol,y=Fraction_of_Alterations, fill=Mechanism), data=mechdf) + geom_bar(stat = 'identity',position = 'stack') + 
+  p_bi <- ggplot(aes(x=gene_alts,y=Fraction_of_Alterations, fill=Mechanism), data=mechdf) + geom_bar(stat = 'identity',position = 'stack') + 
     coord_flip() + theme_bw() + xlab('TSG') + ylab('Biallelic Fraction') + 
-    ggtitle('Pan-Cancer') + theme(axis.text.y = element_blank(), title = element_text(size=mainsize)) + 
-    theme(plot.title = element_text(size = mainsize), axis.title.y = element_blank()) + 
+    ggtitle('Pan-Cancer') + theme(axis.text.y = element_blank(), plot.title = element_text(size=mainsize), axis.title.x = element_text(size = xsize)) + 
     scale_fill_manual(values=colorvec) + theme(legend.position = "none") + 
     facet_grid(Pathway ~ ., scales = "free", space = "free") + 
     theme(strip.text = element_text(
@@ -348,7 +359,7 @@ biallelicRateTileplot <- function(data, xsize=6, mainsize=12, force_gene=TRUE, f
   "
   p <- p_alt + p_bi + p_heatmap + fga + tmb + plot_layout(design = layout, widths = c(1,1,8), heights = c(8,.5,.5))
   
-  list('plot'=p,'table'=table)
+  list('plot'=p,'table'=dat, 'table2'=mechdf)
 }
 
 #Generating figure 1:
@@ -361,8 +372,13 @@ generateFigure1 <- function(drivers, xsize=6, mainsize=12, fga_and_tmb, tsgdf, s
   f1a <- f1a$plot
   
   ###
-  f1b <- biallelicRateTileplot(data=drivers, path=NULL,fga_and_tmb=fga_and_tmb, tsgdf=tsgdf, subtypeTable=subtypeTable, colorvec=colorvec)
+  #Removing amplifications in RUNX1, GATA3, and FOXA1:
+  removeAmps <- which(drivers$Hugo_Symbol %in% c('RUNX1','GATA3','FOXA1') & drivers$zygosity_call %in% 
+                        c('Amplification - (gene-level)','Amplification - CNA'))
+  if(length(removeAmps) > 0){data <- drivers[-removeAmps,]}
+  f1b <- biallelicRateTileplot(data=data, path=NULL,fga_and_tmb=fga_and_tmb, tsgdf=tsgdf, subtypeTable=subtypeTable, colorvec=colorvec)
   f1b_table <- f1b$table
+  f1b_table.pancan <- f1b$table2
   f1b <- f1b$plot
   
   #f1c:
